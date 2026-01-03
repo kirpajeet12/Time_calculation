@@ -1,45 +1,107 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Employee Hours</title>
+  <title>Employee Work App</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    input, select, button { margin: 5px; padding: 5px; }
+    table { border-collapse: collapse; margin-top: 15px; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 6px; }
+  </style>
 </head>
 <body>
-  <h2>Add Daily Hours</h2>
 
-  <input id="name" placeholder="Employee Name"><br><br>
-  <input id="date" type="date"><br><br>
-  <input id="hours" type="number" step="0.25" placeholder="Hours Worked"><br><br>
-  <button onclick="addHours()">Add</button>
+<h2>👤 Add Employee</h2>
+<input id="empName" placeholder="Name">
+<input id="empRole" placeholder="Role">
+<input id="empRate" placeholder="Hourly Rate" type="number">
+<button onclick="addEmployee()">Add</button>
 
-  <hr>
+<hr>
 
-  <h2>Monthly Summary</h2>
-  <input id="month" type="month">
-  <button onclick="getSummary()">Get Summary</button>
+<h2>⏱ Add Work Log</h2>
+<select id="empSelect"></select>
+<input type="date" id="date">
+<input type="time" id="start">
+<input type="time" id="end">
+<button onclick="addLog()">Save</button>
 
-  <pre id="result"></pre>
+<hr>
 
-  <script>
-    async function addHours() {
-      await fetch("/add-hours", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: document.getElementById("name").value,
-          date: document.getElementById("date").value,
-          hours: document.getElementById("hours").value
-        })
-      });
-      alert("Hours added");
-    }
+<h2>📋 Work History</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th><th>Date</th><th>Start</th><th>End</th><th>Hours</th>
+    </tr>
+  </thead>
+  <tbody id="logs"></tbody>
+</table>
 
-    async function getSummary() {
-      const month = document.getElementById("month").value;
-      const res = await fetch(`/summary/${month}`);
-      const data = await res.json();
-      document.getElementById("result").textContent =
-        JSON.stringify(data, null, 2);
-    }
-  </script>
+<script>
+let employees = [];
+
+async function loadEmployees() {
+  employees = await fetch("/employees").then(r => r.json());
+  const sel = document.getElementById("empSelect");
+  sel.innerHTML = "";
+  employees.forEach(e => {
+    const o = document.createElement("option");
+    o.value = e.id;
+    o.textContent = e.name;
+    sel.appendChild(o);
+  });
+}
+
+async function addEmployee() {
+  await fetch("/employees", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: empName.value,
+      role: empRole.value,
+      hourlyRate: empRate.value
+    })
+  });
+  empName.value = empRole.value = empRate.value = "";
+  loadEmployees();
+}
+
+async function addLog() {
+  await fetch("/worklog", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      employeeId: empSelect.value,
+      date: date.value,
+      startTime: start.value,
+      endTime: end.value
+    })
+  });
+  loadLogs();
+}
+
+async function loadLogs() {
+  const logs = await fetch("/worklog").then(r => r.json());
+  const tbody = document.getElementById("logs");
+  tbody.innerHTML = "";
+
+  logs.forEach(l => {
+    const emp = employees.find(e => e.id === l.employeeId);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${emp?.name || ""}</td>
+      <td>${l.date}</td>
+      <td>${l.startTime}</td>
+      <td>${l.endTime}</td>
+      <td>${l.hours.toFixed(2)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+loadEmployees().then(loadLogs);
+</script>
+
 </body>
 </html>
