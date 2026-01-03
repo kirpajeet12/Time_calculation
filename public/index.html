@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Employee Hours</title>
+</head>
+<body>
+  <h2>Add Daily Hours</h2>
+
+  <input id="name" placeholder="Employee Name"><br><br>
+  <input id="date" type="date"><br><br>
+  <input id="hours" type="number" step="0.25" placeholder="Hours Worked"><br><br>
+  <button onclick="addHours()">Add</button>
+
+  <hr>
+
+  <h2>Monthly Summary</h2>
+  <input id="month" type="month">
+  <button onclick="getSummary()">Get Summary</button>
+
+  <pre id="result"></pre>
+
+  <script>
+    async function addHours() {
+      await fetch("/add-hours", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: document.getElementById("name").value,
+          date: document.getElementById("date").value,
+          hours: document.getElementById("hours").value
+        })
+      });
+      alert("Hours added");
+    }
+
+    async function getSummary() {
+      const month = document.getElementById("month").value;
+      const res = await fetch(`/summary/${month}`);
+      const data = await res.json();
+      document.getElementById("result").textContent =
+        JSON.stringify(data, null, 2);
+    }
+  </script>
+</body>
+</html>
