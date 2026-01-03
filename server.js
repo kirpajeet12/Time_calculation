@@ -10,52 +10,47 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-const DATA_FILE = path.join(__dirname, "hours.json");
+const EMP_FILE = path.join(__dirname, "data/employees.json");
+const LOG_FILE = path.join(__dirname, "data/worklogs.json");
 
-/* =========================
-   ADD DAILY HOURS
-========================= */
-app.post("/add-hours", (req, res) => {
-  const { name, date, hours } = req.body;
+const read = file => JSON.parse(fs.readFileSync(file));
+const write = (file, data) => fs.writeFileSync(file, JSON.stringify(data, null, 2));
 
-  if (!name || !date || !hours) {
-    return res.status(400).json({ error: "Missing fields" });
-  }
-
-  const data = JSON.parse(fs.readFileSync(DATA_FILE));
-  data.push({
-    name,
-    date,
-    hours: Number(hours)
-  });
-
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-  res.json({ success: true });
+/* ===================== EMPLOYEES ===================== */
+app.get("/employees", (req, res) => {
+  res.json(read(EMP_FILE));
 });
 
-/* =========================
-   MONTHLY SUMMARY
-========================= */
-app.get("/summary/:month", (req, res) => {
-  const month = req.params.month; // YYYY-MM
-  const data = JSON.parse(fs.readFileSync(DATA_FILE));
-
-  const summary = {};
-
-  data.forEach(entry => {
-    if (entry.date.startsWith(month)) {
-      if (!summary[entry.name]) summary[entry.name] = 0;
-      summary[entry.name] += entry.hours;
-    }
-  });
-
-  res.json(summary);
+app.post("/employees", (req, res) => {
+  const employees = read(EMP_FILE);
+  employees.push({ id: Date.now().toString(), ...req.body });
+  write(EMP_FILE, employees);
+  res.sendStatus(200);
 });
 
-/* =========================
-   START SERVER
-========================= */
-const PORT = 3000;
-app.listen(PORT, () =>
-  console.log(`✅ Running at http://localhost:${PORT}`)
-);
+/* ===================== WORK LOGS ===================== */
+app.post("/worklog", (req, res) => {
+  const { employeeId, date, startTime, endTime } = req.body;
+
+  const toMin = t => {
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  const hours = (toMin(endTime) - toMin(startTime)) / 60;
+
+  const logs = read(LOG_FILE);
+  logs.push({ employeeId, date, startTime, endTime, hours });
+  write(LOG_FILE, logs);
+
+  res.sendStatus(200);
+});
+
+app.get("/worklog", (req, res) => {
+  res.json(read(LOG_FILE));
+});
+
+/* ===================== START ===================== */
+app.listen(3000, "0.0.0.0", () => {
+  console.log("✅ Running at http://localhost:3000");
+});
