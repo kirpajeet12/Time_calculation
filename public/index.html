@@ -1,107 +1,201 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Employee Work App</title>
+  <meta charset="UTF-8" />
+  <title>Employee Time Tracker</title>
+
   <style>
-    body { font-family: Arial; padding: 20px; }
-    input, select, button { margin: 5px; padding: 5px; }
-    table { border-collapse: collapse; margin-top: 15px; width: 100%; }
-    th, td { border: 1px solid #ccc; padding: 6px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: auto;
+    }
+
+    .section {
+      background: #fff;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+    }
+
+    input, button {
+      padding: 8px;
+      margin: 5px;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .employees {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 15px;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .card h3 {
+      margin-top: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    th {
+      background: #f0f0f0;
+    }
+
+    .summary {
+      font-weight: bold;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
 
-<h2>👤 Add Employee</h2>
-<input id="empName" placeholder="Name">
-<input id="empRole" placeholder="Role">
-<input id="empRate" placeholder="Hourly Rate" type="number">
-<button onclick="addEmployee()">Add</button>
+  <h1>Employee Time Tracker</h1>
 
-<hr>
+  <div class="container">
 
-<h2>⏱ Add Work Log</h2>
-<select id="empSelect"></select>
-<input type="date" id="date">
-<input type="time" id="start">
-<input type="time" id="end">
-<button onclick="addLog()">Save</button>
+    <!-- ADD EMPLOYEE -->
+    <div class="section">
+      <h2>Add Employee</h2>
+      <input id="empName" placeholder="Employee name">
+      <button onclick="addEmployee()">Add Employee</button>
+    </div>
 
-<hr>
+    <!-- ADD DAILY ENTRY -->
+    <div class="section">
+      <h2>Add Daily Work Entry</h2>
+      <select id="workEmployee"></select>
+      <input type="date" id="workDate">
+      <input type="time" id="startTime">
+      <input type="time" id="endTime">
+      <button onclick="addWork()">Add Entry</button>
+    </div>
 
-<h2>📋 Work History</h2>
-<table>
-  <thead>
-    <tr>
-      <th>Name</th><th>Date</th><th>Start</th><th>End</th><th>Hours</th>
-    </tr>
-  </thead>
-  <tbody id="logs"></tbody>
-</table>
+    <!-- EMPLOYEE CARDS -->
+    <div class="section">
+      <h2>Employees</h2>
+      <div class="employees" id="employeeCards"></div>
+    </div>
 
-<script>
-let employees = [];
+  </div>
 
-async function loadEmployees() {
-  employees = await fetch("/employees").then(r => r.json());
-  const sel = document.getElementById("empSelect");
-  sel.innerHTML = "";
-  employees.forEach(e => {
-    const o = document.createElement("option");
-    o.value = e.id;
-    o.textContent = e.name;
-    sel.appendChild(o);
-  });
-}
+  <script>
+    async function addEmployee() {
+      const name = document.getElementById("empName").value.trim();
+      if (!name) return alert("Enter name");
 
-async function addEmployee() {
-  await fetch("/employees", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name: empName.value,
-      role: empRole.value,
-      hourlyRate: empRate.value
-    })
-  });
-  empName.value = empRole.value = empRate.value = "";
-  loadEmployees();
-}
+      await fetch("/employees", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      });
 
-async function addLog() {
-  await fetch("/worklog", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      employeeId: empSelect.value,
-      date: date.value,
-      startTime: start.value,
-      endTime: end.value
-    })
-  });
-  loadLogs();
-}
+      document.getElementById("empName").value = "";
+      loadEmployees();
+    }
 
-async function loadLogs() {
-  const logs = await fetch("/worklog").then(r => r.json());
-  const tbody = document.getElementById("logs");
-  tbody.innerHTML = "";
+    async function addWork() {
+      const employee = document.getElementById("workEmployee").value;
+      const date = document.getElementById("workDate").value;
+      const start = document.getElementById("startTime").value;
+      const end = document.getElementById("endTime").value;
 
-  logs.forEach(l => {
-    const emp = employees.find(e => e.id === l.employeeId);
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${emp?.name || ""}</td>
-      <td>${l.date}</td>
-      <td>${l.startTime}</td>
-      <td>${l.endTime}</td>
-      <td>${l.hours.toFixed(2)}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
+      if (!employee || !date || !start || !end) {
+        return alert("Fill all fields");
+      }
 
-loadEmployees().then(loadLogs);
-</script>
+      await fetch("/work", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employee, date, start, end })
+      });
+
+      loadEmployees();
+    }
+
+    async function loadEmployees() {
+      const res = await fetch("/employees");
+      const data = await res.json();
+
+      const select = document.getElementById("workEmployee");
+      select.innerHTML = "";
+
+      const cards = document.getElementById("employeeCards");
+      cards.innerHTML = "";
+
+      data.forEach(emp => {
+        // dropdown
+        const opt = document.createElement("option");
+        opt.value = emp.name;
+        opt.textContent = emp.name;
+        select.appendChild(opt);
+
+        // card
+        const card = document.createElement("div");
+        card.className = "card";
+
+        let rows = "";
+        emp.entries.forEach(e => {
+          rows += `
+            <tr>
+              <td>${e.date}</td>
+              <td>${e.start}</td>
+              <td>${e.end}</td>
+              <td>${e.hours}</td>
+            </tr>
+          `;
+        });
+
+        card.innerHTML = `
+          <h3>${emp.name}</h3>
+          <table>
+            <tr>
+              <th>Date</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Hours</th>
+            </tr>
+            ${rows || "<tr><td colspan='4'>No entries</td></tr>"}
+          </table>
+          <div class="summary">Total Hours: ${emp.total}</div>
+        `;
+
+        cards.appendChild(card);
+      });
+    }
+
+    loadEmployees();
+  </script>
 
 </body>
 </html>
+
