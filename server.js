@@ -10,6 +10,10 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+app.get("/__debug", (req, res) => {
+  res.send("DEBUG ROUTE HIT");
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
 const DATA_FILE = path.join(__dirname, "data.json");
